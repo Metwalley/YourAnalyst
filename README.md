@@ -30,7 +30,7 @@ your-analyst-project/
 ├── deploy.py             # Deploy trained models
 ├── data/                 # Raw & cleaned datasets
 ├── models/               # Trained model files (.pkl)
-└── requirements.txt      # Project dependencies
+└── requirements.docx      # Project dependencies
 ```
 
 ---
@@ -127,7 +127,7 @@ We’re proud to turn a single project into a practical tool for future analysts
    `cd youranalyst`
 
 2. Install requirements
-   `pip install -r requirements.txt`
+   `pip install -r requirements.docx`
 
 3. Launch the app
    `streamlit run yourAnalyst.py`
