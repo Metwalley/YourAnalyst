@@ -65,6 +65,19 @@ your-analyst-project/
   * True vs. Predicted table
 * Download trained models for later use
 
+### 🧠 Chatbot Assistant Tab
+
+* Get **real-time guidance and analysis** from your own intelligent assistant
+* Ask **any data-related question** — from data cleaning tips to model recommendations
+* Understand your dataset with **context-aware suggestions** and **explainable answers**
+* Offers insights like:
+
+  * "Which features are most correlated with the target?"
+  * "Should I use classification or regression?"
+  * "What preprocessing is needed for this dataset?"
+
+✅ The chatbot is **integrated with your data** and uses **advanced reasoning** to help you at every step. It's like having a data scientist sitting beside you — smart, fast, and always ready to assist.
+
 ### 📈 Dashboard.py – Forecasting & Optimization
 
 * Forecast 90 days of sales using XGBoost Regressor (R² = 0.98)
