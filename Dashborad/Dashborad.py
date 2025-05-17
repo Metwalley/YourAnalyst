@@ -140,7 +140,12 @@ def render_tab_content(tab):
                             options=[{'label': typ, 'value': typ} for typ in sorted(df_eda['StoreType'].unique())],
                             multi=True,
                             placeholder="All Store Types",
-                            className="mb-3"
+                            className="mb-3",
+                            style={
+                                'backgroundColor': '#303030',
+                                'color': 'white',
+                                'borderColor': '#555'
+                            }
                         ),
                         
                         html.Label("Assortment Type:"),
@@ -149,7 +154,12 @@ def render_tab_content(tab):
                             options=[{'label': ass, 'value': ass} for ass in sorted(df_eda['Assortment'].unique())],
                             multi=True,
                             placeholder="All Assortments",
-                            className="mb-3"
+                            className="mb-3",
+                            style={
+                                'backgroundColor': '#303030',
+                                'color': 'white',
+                                'borderColor': '#555'
+                            }
                         ),
                         
                         html.Label("Promo Status:"),
@@ -161,7 +171,12 @@ def render_tab_content(tab):
                             ],
                             multi=True,
                             placeholder="All Promo Statuses",
-                            className="mb-3"
+                            className="mb-3",
+                            style={
+                                'backgroundColor': '#303030',
+                                'color': 'white',
+                                'borderColor': '#555'
+                            }
                         ),
                         
                         html.Label("Day of Week:"),
@@ -170,7 +185,12 @@ def render_tab_content(tab):
                             options=[{'label': f'Day {i}', 'value': i} for i in range(1,8)],
                             multi=True,
                             placeholder="All Days",
-                            className="mb-3"
+                            className="mb-3",
+                            style={
+                                'backgroundColor': '#303030',
+                                'color': 'white',
+                                'borderColor': '#555'
+                            }
                         ),
                         
                         dbc.Button("Apply Filters", id='apply-filters', color="primary", className="w-100")
@@ -209,7 +229,12 @@ def render_tab_content(tab):
                             clearable=False,
                             options=[{'label': f"Store {i}", 'value': i} for i in sorted(df_all['Store'].unique())],
                             value=sorted(df_all['Store'].unique())[0],
-                            className="mb-3"
+                            className="mb-3",
+                            style={
+                                'backgroundColor': '#303030',
+                                'color': 'white',
+                                'borderColor': '#555'
+                            }
                         ),
                         html.Label("Date Range:"),
                         dcc.DatePickerRange(
@@ -247,7 +272,12 @@ def render_tab_content(tab):
                             clearable=False,
                             options=[{'label': f"Store {i}", 'value': i} for i in sorted(df_all['Store'].unique())],
                             value=sorted(df_all['Store'].unique())[0],
-                            className="mb-3"
+                            className="mb-3",
+                            style={
+                                'backgroundColor': '#303030',
+                                'color': 'white',
+                                'borderColor': '#555'
+                            }
                         ),
                         html.Label("Date Range:"),
                         dcc.DatePickerRange(
