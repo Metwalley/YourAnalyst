@@ -22,6 +22,8 @@ st.set_page_config(page_title="YourAnalyst Assistant", page_icon="🦾", layout=
 st.markdown(
     """
     <style>
+    /* ===== Original styles (unchanged) ===== */
+
     /* App background */
     .reportview-container {
         background-color: #212121;
@@ -103,10 +105,64 @@ st.markdown(
         color: #e0e0fd;
         font-size: 18px;
     }
+
+    /* ===== New: Purple horizontal radio tabs only ===== */
+
+    /* Container: horizontal flex row for the radio buttons */
+    div[role="radiogroup"] {
+        display: flex !important;
+        flex-direction: row !important;  /* ADD THIS */
+        flex-wrap: nowrap !important;
+        gap: 1rem;
+        padding: 10px 0;
+        justify-content: flex-start;
+    }
+
+    /* Each radio label styled as purple pill */
+    div[role="radiogroup"] > label {
+        position: relative;
+        display: inline-block;
+        padding: 12px 28px;
+        border-radius: 30px;
+        font-size: 18px;
+        font-weight: 600;
+        background-color: #4b367c; /* dark purple */
+        color: #e0e0fd;
+        border: 2px solid transparent;
+        transition: all 0.3s ease-in-out;
+        cursor: pointer;
+        display: inline-flex;      /* use inline-flex to align items inside */
+        align-items: center;       /* vertical center of circle and text */
+        gap: 8px;   
+        user-select: none;
+        min-width: 130px;
+        text-align: center;
+    }
+
+    /* Hover effect on each tab */
+    div[role="radiogroup"] > label:hover {
+        background-color: #6f53c9; /* lighter purple */
+        border-color: #b4a7e7;
+    }
+
+    /* Selected (checked) tab styling */
+    div[role="radiogroup"] > label:has(input[type="radio"]:checked) {
+        background-color: #9b59b6; /* bright purple */
+        border: 2px solid #b4a7e7;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(155, 89, 182, 0.5);
+    }
+
+    /* Hide the default radio input */
+    div[role="radiogroup"] input[type="radio"] {
+        display: none;
+    }
+
     </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
+
 
 
 
@@ -118,13 +174,10 @@ st.title("🌟 YourAnalyst ")
 
 # ========== تحميل الداتا ==========
 uploaded_file = st.file_uploader("Upload your dataset", type=["csv", "excel", "json", "parquet"])
-
 if uploaded_file is not None:
-    file_type = st.selectbox("Select file type", ["csv", "excel", "json", "parquet"], key="file_type")
-
     # Only reload df if new file uploaded
     if "uploaded_file" not in st.session_state or st.session_state.uploaded_file != uploaded_file:
-        df = af.load_data(uploaded_file, file_type)
+        df = af.load_data(uploaded_file)
         if df is not None:
             st.session_state.df = df
             st.session_state.uploaded_file = uploaded_file
@@ -133,17 +186,18 @@ else:
     if "df" not in st.session_state:
         st.info("Please upload a dataset to continue.")
 
-# ========== Show Tabs If Data Exists ==========
+# ========= Show Tabs If Data Exists =========
+
 if "df" in st.session_state:
     df = st.session_state.df
-
-    # ========== التابز ==========
-    tabs = st.tabs(["🛠️ Preprocessing", "📊 Visualization", "🤖 Models", "🦾 ChatBot"])
-
+    tab_labels = ["🛠️ Preprocessing", "📊 Visualization", "🤖 Models", "🦾 ChatBot"]
+    selected_tab = st.radio("Choose a tab", tab_labels, index=st.session_state.get("active_tab", 0))
+    
+    
     # ==============================
     # 1. تبويب Preprocessing
     # ==============================
-    with tabs[0]:
+    if selected_tab == "🛠️ Preprocessing":
         st.header("🛠️ Data Preprocessing")
 
         # Define all preprocessing options
@@ -153,7 +207,7 @@ if "df" in st.session_state:
             "💡 Encode Features", "🗑️ Remove Columns", "✏️ Rename Columns", "🧠 Handle Outliers",
             "🔄 Replace Values", "🔁 Change Column Data Types", "🕓 Extract Datetime Features",
             "🔢 Scale/Normalize Features", "🧬 Feature Interaction or Generation",
-            "🧽 Low-Variance Features", "📉 Correlation Analysis",
+            "🧽 Constant or Low-Variance", "📉 Correlation Analysis",
             "📊 Feature Importance", "🔍 Check Class Imbalance", "🎯 Set Target Variable",
             "📦 Split Dataset (Train/Test)", "📥 Download Cleaned Dataset"
         ]
@@ -291,12 +345,8 @@ if "df" in st.session_state:
 
         elif option == "📊 Dataset Summary":
             st.subheader("📊 Dataset Summary & Columns Info")
+            af.view_all_columns_summary(df)
 
-            if "df" in st.session_state:
-                df = st.session_state.df
-                af.view_all_columns_summary(df)
-            else:
-                st.warning("⚠️ No dataset loaded.")
 
 
         elif option == "🧹 Remove Duplicates":
@@ -327,8 +377,8 @@ if "df" in st.session_state:
                     missing_count = df[col].isnull().sum()
                     st.markdown(f"- **{col}** *(dtype: `{dtype}`, missing: `{missing_count}`)*")
 
-        elif option == "📉 Correlation Analysis / Multicollinearity Detection":
-            st.subheader("📉 Correlation Analysis / Multicollinearity Detection")
+        elif option == "📉 Correlation Analysis":
+            st.subheader("📉 Correlation Analysis")
             df = st.session_state.get("df", df)
             threshold = st.slider("Correlation Threshold (absolute)", min_value=0.5, max_value=1.0, value=0.9, step=0.01)
             to_drop, corr_matrix = af.detect_highly_correlated(df, threshold)
@@ -376,7 +426,6 @@ if "df" in st.session_state:
                             # Apply feature creation
                             df = af.generate_feature(df, col1, col2, operation, new_col_name)
                             st.session_state.df = df
-                            st.success("🎉 Feature created successfully!")
                             st.dataframe(df.head())
 
                 with col2_:
@@ -389,22 +438,26 @@ if "df" in st.session_state:
                         else:
                             st.warning("⚠️ No previous version to revert to.")
 
-        elif option == "🧽 Detect & Handle Low-Variance Features":
+        elif option == "🧽 Constant or Low-Variance":
             st.subheader("🧽 Detect & Handle Constant or Low-Variance Features")
             df = st.session_state.get("df", df)
             threshold = st.slider("Variance Threshold", min_value=0.0, max_value=1.0, value=0.0, step=0.01)
             low_var_cols = af.detect_low_variance_features(df, threshold)
 
             if not low_var_cols:
-                st.info("✅ No low-variance features detected.")
+                st.success("✅ No low-variance features detected.")
             else:
-                st.warning(f"⚠️ Found {len(low_var_cols)} low-variance columns.")
-                st.write(low_var_cols)
+                st.warning(f"⚠️ Found {len(low_var_cols)} low-variance feature(s):")
+                
+                # Show columns in a nice dataframe
+                st.dataframe(pd.DataFrame(low_var_cols, columns=["Low-Variance Features"]))
 
-                if st.button("Remove Low-Variance Features"):
+                if st.button("🗑️ Remove Low-Variance Features"):
                     df = af.remove_low_variance_features(df, low_var_cols)
                     st.session_state.df = df
-                    st.dataframe(df)
+                    st.success(f"Removed {len(low_var_cols)} low-variance feature(s). Updated dataframe:")
+                    st.dataframe(df)   
+
 
 
 
@@ -588,9 +641,8 @@ if "df" in st.session_state:
     # ==============================
     # 2. تبويب Visualization
     # ==============================
-    with tabs[1]:
+    if selected_tab == "📊 Visualization":
         st.header("📊 Visualization")
-        
         # Select the type of plot
         plot_type = st.selectbox("Choose the type of plot", [
             "Scatter Plot", "Line Plot (Time Series)", 
@@ -599,7 +651,6 @@ if "df" in st.session_state:
             "Missing Barplot", "Word Cloud"
         ])
         # Function to show appropriate columns for each plot
-        df = st.session_state.get("df", df)
         def get_column_options(plot_type, df):
             if plot_type in ["Scatter Plot", "Line Plot (Time Series)"]:
                 return df.columns
@@ -626,6 +677,7 @@ if "df" in st.session_state:
 
         # Handling different plot types
         if st.button(f"Generate {plot_type}"):
+            st.session_state.active_tab = 1 
             try:
                 if plot_type == "Histogram":
                     fig = v.plot_histogram(df, selected_column)
@@ -670,10 +722,16 @@ if "df" in st.session_state:
                     st.download_button("Download Plot", plot_buffer, file_name=f"{plot_type}.png", mime="image/png")
 
                 elif plot_type == "Correlation Heatmap":
-                    fig = v.plot_correlation_heatmap(df)
-                    st.pyplot(fig, use_container_width=True)
-                    plot_buffer = save_plot(fig, plot_type)
-                    st.download_button("Download Plot", plot_buffer, file_name=f"{plot_type}.png", mime="image/png")
+                    # Identify non-numeric columns
+                    non_numeric_cols = df.select_dtypes(exclude=['number']).columns.tolist()
+                    
+                    if non_numeric_cols:
+                        st.error(f"⚠️ All features must be numeric for the Correlation Heatmap. Please encode or remove these columns: {', '.join(non_numeric_cols)}")
+                    else:
+                        fig = v.plot_correlation_heatmap(df)
+                        st.pyplot(fig, use_container_width=True)
+                        plot_buffer = save_plot(fig, plot_type)
+                        st.download_button("Download Plot", plot_buffer, file_name=f"{plot_type}.png", mime="image/png")
 
                 elif plot_type == "Pairplot":
                     fig = v.plot_pairplot(df)
@@ -708,6 +766,8 @@ if "df" in st.session_state:
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
+
+
     # ==============================
     # 3. تبويب Models
     # ==============================
@@ -724,131 +784,139 @@ if "df" in st.session_state:
 
     
 # ========= Model Selection & Training =========
-    with tabs[2]:
+    if selected_tab == "🤖 Models":
         st.header("🤖 Model Selection & Training")
 
+        # Check if preprocessing is done
         if not all(k in st.session_state for k in ['X_train', 'X_test', 'y_train', 'y_test', 'target_col']):
             st.warning("⚠️ Please complete preprocessing steps first: Set target variable and split dataset.")
-        
         else:
-            # ========== Load Models ==========
-            st.subheader("📂 Load Pre-trained Models")
-            uploaded_model = st.file_uploader("Upload a pre-trained model", type=["pkl"])
+            X_train = st.session_state.X_train
+            X_test = st.session_state.X_test
+            y_train = st.session_state.y_train
+            y_test = st.session_state.y_test
+
+            # ========== Load Pre-trained Model ==========
+            st.subheader("📂 Load a Pre-trained Model")
+            uploaded_model = st.file_uploader("Upload a .pkl model file", type=["pkl"])
 
             if uploaded_model is not None:
                 try:
-                    model_bytes = uploaded_model.read()
-                    loaded_model = pickle.loads(model_bytes)
+                    loaded_model = pickle.load(uploaded_model)
                     st.session_state.trained_model = loaded_model
                     st.success("✅ Model loaded successfully!")
-                    
+
                     if st.button("🔮 Predict with Loaded Model"):
-                        y_pred = loaded_model.predict(st.session_state.X_test)
+                        try:
+                            y_pred = loaded_model.predict(X_test)
+                            st.session_state.y_pred = y_pred
+
+                            st.write("### 🧾 Predictions")
+                            st.write(pd.DataFrame({
+                                "True": y_test,
+                                "Predicted": y_pred
+                            }))
+
+                            st.subheader("📊 Evaluation Metrics")
+                            from sklearn.base import ClassifierMixin, RegressorMixin
+
+                            if isinstance(loaded_model, ClassifierMixin):
+                                st.write("Accuracy:", accuracy_score(y_test, y_pred))
+                                st.write("F1 Score:", f1_score(y_test, y_pred, average='weighted'))
+                                st.write("Precision:", precision_score(y_test, y_pred, average='weighted'))
+                                st.write("Recall:", recall_score(y_test, y_pred, average='weighted'))
+                            elif isinstance(loaded_model, RegressorMixin):
+                                st.write("R² Score:", r2_score(y_test, y_pred))
+                                st.write("MAE:", mean_absolute_error(y_test, y_pred))
+                            else:
+                                st.warning("⚠️ Unsupported model type for evaluation.")
+
+                        except Exception as e:
+                            st.error(f"❌ Prediction failed: {e}")
+                except Exception as e:
+                    st.error(f"❌ Failed to load model: {e}")
+
+            st.divider()
+
+            # ========== Train New Model ==========
+            st.subheader("🧠 Train a New Model")
+
+            task_type = st.radio("Select task type", ["Classification", "Regression"], horizontal=True)
+
+            classification_models = {
+                "Logistic Regression": LogisticRegression(max_iter=1000),
+                "Random Forest": RandomForestClassifier(),
+                "K-Nearest Neighbors": KNeighborsClassifier(),
+                "Support Vector Machine": SVC(probability=True),
+                "Decision Tree": DecisionTreeClassifier(),
+                "Gradient Boosting": GradientBoostingClassifier(),
+                "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='logloss')
+            }
+
+            regression_models = {
+                "Linear Regression": LinearRegression(),
+                "Random Forest Regressor": RandomForestRegressor(),
+                "K-Nearest Neighbors Regressor": KNeighborsRegressor(),
+                "Support Vector Regressor": SVR(),
+                "Gradient Boosting Regressor": GradientBoostingRegressor(),
+                "XGBoost Regressor": XGBRegressor()
+            }
+
+            model_options = list(classification_models.keys()) if task_type == "Classification" else list(regression_models.keys())
+            model_name = st.selectbox("Select a model", model_options)
+
+            st.markdown("#### 🚦 Training")
+            if st.button("🚀 Train Model"):
+                try:
+                    # Validate feature types
+                    non_numeric_cols = [col for col in X_train.columns if not pd.api.types.is_numeric_dtype(X_train[col])]
+                    if non_numeric_cols:
+                        st.warning(f"⚠️ All features must be numeric. Please encode: {', '.join(non_numeric_cols)}")
+                    else:
+                        model = classification_models[model_name] if task_type == "Classification" else regression_models[model_name]
+                        model.fit(X_train, y_train)
+                        y_pred = model.predict(X_test)
+
+                        st.session_state.trained_model = model
                         st.session_state.y_pred = y_pred
-                        st.write("**Predictions**", pd.DataFrame({
-                            "True Values": st.session_state.y_test,
-                            "Predictions": y_pred
+
+                        st.success(f"✅ {model_name} trained successfully!")
+
+                        st.write("### 🧾 True vs Predicted")
+                        st.write(pd.DataFrame({
+                            "True": y_test,
+                            "Predicted": y_pred
                         }))
 
                         st.subheader("📊 Evaluation Metrics")
-                        if isinstance(loaded_model, (LogisticRegression, RandomForestClassifier, KNeighborsClassifier, SVC, DecisionTreeClassifier, GradientBoostingClassifier, XGBClassifier)):
-                            st.write("**Accuracy:**", accuracy_score(st.session_state.y_test, y_pred))
-                            st.write("**F1 Score:**", f1_score(st.session_state.y_test, y_pred, average='weighted'))
-                            st.write("**Precision:**", precision_score(st.session_state.y_test, y_pred, average='weighted'))
-                            st.write("**Recall:**", recall_score(st.session_state.y_test, y_pred, average='weighted'))
-                        
-                        elif isinstance(loaded_model, (LinearRegression, RandomForestRegressor, KNeighborsRegressor, SVR, GradientBoostingRegressor, XGBRegressor)):
-                            st.write("**R² Score:**", r2_score(st.session_state.y_test, y_pred))
-                            st.write("**MAE:**", mean_absolute_error(st.session_state.y_test, y_pred))
+                        if task_type == "Classification":
+                            st.write("Accuracy:", accuracy_score(y_test, y_pred))
+                            st.write("F1 Score:", f1_score(y_test, y_pred, average='weighted'))
+                            st.write("Precision:", precision_score(y_test, y_pred, average='weighted'))
+                            st.write("Recall:", recall_score(y_test, y_pred, average='weighted'))
                         else:
-                            st.error("❌ Unsupported model type for evaluation.")
+                            st.write("R² Score:", r2_score(y_test, y_pred))
+                            st.write("MAE:", mean_absolute_error(y_test, y_pred))
+
+                        # Save and offer download
+                        model_filename = f"{model_name.replace(' ', '_')}.pkl"
+                        os.makedirs("models", exist_ok=True)
+                        model_path = os.path.join("models", model_filename)
+                        with open(model_path, 'wb') as f:
+                            pickle.dump(model, f)
+
+                        buffer = io.BytesIO()
+                        pickle.dump(model, buffer)
+                        buffer.seek(0)
+                        st.download_button(
+                            label="📥 Download Trained Model",
+                            data=buffer,
+                            file_name=model_filename,
+                            mime="application/octet-stream"
+                        )
+
                 except Exception as e:
-                    st.error(f"❌ Error loading model: {e}")
-
-            # ========== Train New Model ==========
-            st.subheader("🔄 Train New Model")
-            task_type = st.radio("Select ML Task Type:", ["Classification", "Regression"])
-
-            if task_type == "Classification":
-                model_name = st.selectbox("Choose a classification model:", [
-                    "Logistic Regression", "Random Forest", "K-Nearest Neighbors", "Support Vector Machine", 
-                    "Decision Tree", "Gradient Boosting", "XGBoost"
-                ])
-            else:
-                model_name = st.selectbox("Choose a regression model:", [
-                    "Linear Regression", "Random Forest Regressor", "K-Nearest Neighbors Regressor", 
-                    "Support Vector Regressor", "Gradient Boosting Regressor", "XGBoost Regressor"
-                ])
-
-            if st.button("🚀 Train Model"):
-                if task_type == "Classification":
-                    if model_name == "Logistic Regression":
-                        model = LogisticRegression(max_iter=1000)
-                    elif model_name == "Random Forest":
-                        model = RandomForestClassifier()
-                    elif model_name == "K-Nearest Neighbors":
-                        model = KNeighborsClassifier()
-                    elif model_name == "Support Vector Machine":
-                        model = SVC(probability=True)
-                    elif model_name == "Decision Tree":
-                        model = DecisionTreeClassifier()
-                    elif model_name == "Gradient Boosting":
-                        model = GradientBoostingClassifier()
-                    elif model_name == "XGBoost":
-                        model = XGBClassifier()
-                else:
-                    if model_name == "Linear Regression":
-                        model = LinearRegression()
-                    elif model_name == "Random Forest Regressor":
-                        model = RandomForestRegressor()
-                    elif model_name == "K-Nearest Neighbors Regressor":
-                        model = KNeighborsRegressor()
-                    elif model_name == "Support Vector Regressor":
-                        model = SVR()
-                    elif model_name == "Gradient Boosting Regressor":
-                        model = GradientBoostingRegressor()
-                    elif model_name == "XGBoost Regressor":
-                        model = XGBRegressor()
-
-                model.fit(st.session_state.X_train, st.session_state.y_train)
-                y_pred = model.predict(st.session_state.X_test)
-
-                st.session_state.trained_model = model
-                st.session_state.y_pred = y_pred
-                st.success(f"✅ {model_name} trained successfully!")
-
-                st.write("### 🔍 True vs Predicted Values")
-                st.write(pd.DataFrame({
-                    "True Values": st.session_state.y_test,
-                    "Predicted Values": y_pred
-                }))
-
-                st.subheader("📊 Evaluation Metrics")
-                if task_type == "Classification":
-                    st.write("**Accuracy:**", accuracy_score(st.session_state.y_test, y_pred))
-                    st.write("**F1 Score:**", f1_score(st.session_state.y_test, y_pred, average='weighted'))
-                    st.write("**Precision:**", precision_score(st.session_state.y_test, y_pred, average='weighted'))
-                    st.write("**Recall:**", recall_score(st.session_state.y_test, y_pred, average='weighted'))
-                else:
-                    st.write("**R² Score:**", r2_score(st.session_state.y_test, y_pred))
-                    st.write("**MAE:**", mean_absolute_error(st.session_state.y_test, y_pred))
-
-                model_filename = f"{model_name}.pkl"
-                model_path = os.path.join("models", model_filename)
-                os.makedirs(os.path.dirname(model_path), exist_ok=True)
-
-                with open(model_path, 'wb') as f:
-                    pickle.dump(model, f)
-
-                buffer = io.BytesIO()
-                pickle.dump(model, buffer)
-                buffer.seek(0)
-                st.download_button(
-                    label="📥 Download Trained Model",
-                    data=buffer,
-                    file_name=model_filename,
-                    mime="application/octet-stream"
-                )
+                    st.error(f"❌ Model training failed: {e}")
 
             # ========== Manual Input Prediction ==========
             if "trained_model" in st.session_state:
@@ -872,17 +940,17 @@ if "df" in st.session_state:
                     except Exception as e:
                         st.error(f"❌ Prediction failed: {e}")
 
- # ==============================
+# ==============================
 # 3. تبويب chatbot
 # ==============================
 
-    with tabs[3]:
+    if selected_tab == "🦾 ChatBot":
         st.header("🦾 YourAnalyst Assistant")
         st.subheader("🔍 Analyze Dataset and Suggest Steps")
 
-        HARDCODED_OPENROUTER_API_KEY = "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"
+        HARDCODED_OPENROUTER_API_KEY = "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"
         HARDCODED_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-        HARDCODED_OPENROUTER_MODEL_NAME = "meta-llama/llama-3.1-8b-instruct:free"
+        HARDCODED_OPENROUTER_MODEL_NAME = "meta-llama/llama-3.3-8b-instruct:free"
 
         df = st.session_state.get("df", df)
         def analyze_dataset(df):
