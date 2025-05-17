@@ -120,16 +120,22 @@ st.title("🌟 YourAnalyst ")
 uploaded_file = st.file_uploader("Upload your dataset", type=["csv", "excel", "json", "parquet"])
 
 if uploaded_file is not None:
-    file_type = st.selectbox("Select file type", ["csv", "excel", "json", "parquet"])
-    df = pd.read_csv(uploaded_file)
-    st.session_state.df = df  # Store DataFrame in session state
+    file_type = st.selectbox("Select file type", ["csv", "excel", "json", "parquet"], key="file_type")
 
+    # Only reload df if new file uploaded
+    if "uploaded_file" not in st.session_state or st.session_state.uploaded_file != uploaded_file:
+        df = af.load_data(uploaded_file, file_type)
+        if df is not None:
+            st.session_state.df = df
+            st.session_state.uploaded_file = uploaded_file
+            st.success("✅ Dataset uploaded and stored successfully.")
+else:
     if "df" not in st.session_state:
-        st.session_state.df = af.load_data(uploaded_file, file_type)
+        st.info("Please upload a dataset to continue.")
 
+# ========== Show Tabs If Data Exists ==========
+if "df" in st.session_state:
     df = st.session_state.df
-
-    st.success("✅ Dataset uploaded successfully!")
 
     # ========== التابز ==========
     tabs = st.tabs(["🛠️ Preprocessing", "📊 Visualization", "🤖 Models", "🦾 ChatBot"])
@@ -148,13 +154,14 @@ if uploaded_file is not None:
             "🔄 Replace Values", "🔁 Change Column Data Types", "🕓 Extract Datetime Features",
             "🔢 Scale/Normalize Features", "🧬 Feature Interaction or Generation",
             "🧽 Low-Variance Features", "📉 Correlation Analysis",
-            "📊 Feature Importance", "🔍 Check Class Imbalance", "🎯 Set Target Variable", "📦 Split Dataset (Train/Test)",
-            "📥 Download Cleaned Dataset"
+            "📊 Feature Importance", "🔍 Check Class Imbalance", "🎯 Set Target Variable",
+            "📦 Split Dataset (Train/Test)", "📥 Download Cleaned Dataset"
         ]
 
-        # Initialize session state for selected option if not set
+        # Initialize selected option
         if "selected_preprocessing" not in st.session_state:
-            st.session_state.selected_preprocessing = "📄 View Dataset"
+            st.session_state.selected_preprocessing = preprocessing_options[0]
+
 
         # Display buttons in a grid (4 columns per row)
         cols = st.columns(4)
@@ -170,7 +177,7 @@ if uploaded_file is not None:
             st.subheader("📄 Dataset Preview")
 
             show_all = st.checkbox("🔁 Show full dataset", value=False)
-
+            df = st.session_state.get("df", df)
             if show_all:
                 st.dataframe(df)
             else:
@@ -182,15 +189,17 @@ if uploaded_file is not None:
 
 
         elif option == "📌 List All Columns":
+            df = st.session_state.get("df", df)
             af.list_all_columns(df)
 
         elif option == "📈 Column Info":
             col = st.selectbox("Choose column:", df.columns)
+            df = st.session_state.get("df", df)
             af.view_column_info(df, col)
         
         elif option == "📊 Feature Importance":
             st.subheader("📊 Feature Importance (via Random Forest)")
-
+            df = st.session_state.get("df", df)
             target = st.selectbox("Select the target column:", df.columns)
             if target:
                 importance = af.get_feature_importance(df, target)
@@ -199,7 +208,7 @@ if uploaded_file is not None:
 
         elif option == "🔍 Check Class Imbalance":
             st.subheader("🔍 Search for Class Imbalance")
-
+            df = st.session_state.get("df", df)
             target_col = st.selectbox("Select the target column:", df.columns)
             class_counts = af.check_class_imbalance(df, target_col)
 
@@ -214,16 +223,17 @@ if uploaded_file is not None:
 
         elif option == "🎯 Set Target Variable":
             st.subheader("🎯 Select Target (Prediction) Column")
-
+            df = st.session_state.get("df", df)
             target_col = st.selectbox("Select your target variable (what you're predicting):", df.columns)
 
             if st.button("Confirm Target Column"):
                 st.session_state.target_col = target_col
                 st.success(f"🎯 Target variable set to: `{target_col}`")
 
+
         elif option == "📦 Split Dataset (Train/Test)":
             st.subheader("📦 Split Dataset into Train/Test")
-
+            df = st.session_state.get("df", df)
             if "target_col" not in st.session_state:
                 st.warning("⚠️ Please set a target column first in the 🎯 section.")
             else:
@@ -251,6 +261,7 @@ if uploaded_file is not None:
             
         elif option == "🕓 Extract Datetime Features":
             st.subheader("🕓 Extract Datetime Features")
+            df = st.session_state.get("df", df)
             datetime_cols = df.select_dtypes(include=["datetime64[ns]", "object"]).columns
             datetime_col = st.selectbox("Select a datetime column:", datetime_cols)
 
@@ -258,11 +269,11 @@ if uploaded_file is not None:
                 df = af.extract_datetime_features(df, datetime_col)
                 st.session_state.df = df
                 st.dataframe(df)
-    
+            st.session_state.df = df    
             
         elif option == "🔁 Change Column Data Types":
             st.subheader("🔁 Change Column Data Types")
-
+            df = st.session_state.get("df", df)
             if st.checkbox("Select all columns"):
                 columns = st.multiselect("Select columns:", df.columns, default=list(df.columns))
             else:
@@ -274,15 +285,22 @@ if uploaded_file is not None:
             if st.button("Apply Type Conversion"):
                 df = af.change_columns_dtype(df, columns, new_dtype)
                 st.session_state.df = df
+                st.success("✅ Type conversion applied.")
                 st.dataframe(df)
-
-
+        
 
         elif option == "📊 Dataset Summary":
             st.subheader("📊 Dataset Summary & Columns Info")
-            af.view_all_columns_summary(df)
+
+            if "df" in st.session_state:
+                df = st.session_state.df
+                af.view_all_columns_summary(df)
+            else:
+                st.warning("⚠️ No dataset loaded.")
+
 
         elif option == "🧹 Remove Duplicates":
+            df = st.session_state.get("df", df)
             st.subheader("🧹 Remove Duplicate Rows")
             num_duplicates = af.check_duplicates(df)
 
@@ -298,6 +316,7 @@ if uploaded_file is not None:
 
         elif option == "🔍 Detect Missing Values":
             st.subheader("🔍 Missing Values")
+            df = st.session_state.get("df", df)
             missing_cols = af.get_missing_columns(df)
             if not missing_cols:
                 st.info("✅ No missing values found in the dataset.")
@@ -310,7 +329,7 @@ if uploaded_file is not None:
 
         elif option == "📉 Correlation Analysis / Multicollinearity Detection":
             st.subheader("📉 Correlation Analysis / Multicollinearity Detection")
-
+            df = st.session_state.get("df", df)
             threshold = st.slider("Correlation Threshold (absolute)", min_value=0.5, max_value=1.0, value=0.9, step=0.01)
             to_drop, corr_matrix = af.detect_highly_correlated(df, threshold)
 
@@ -332,7 +351,7 @@ if uploaded_file is not None:
 
         elif option == "🧬 Feature Interaction or Generation":
             st.subheader("🧬 Feature Interaction / Generation")
-
+            df = st.session_state.get("df", df)
             st.markdown("Example: `(df['Feature1'] + df['Feature2']) / 2`")
             cols = df.columns.tolist()
 
@@ -372,7 +391,7 @@ if uploaded_file is not None:
 
         elif option == "🧽 Detect & Handle Low-Variance Features":
             st.subheader("🧽 Detect & Handle Constant or Low-Variance Features")
-
+            df = st.session_state.get("df", df)
             threshold = st.slider("Variance Threshold", min_value=0.0, max_value=1.0, value=0.0, step=0.01)
             low_var_cols = af.detect_low_variance_features(df, threshold)
 
@@ -392,7 +411,7 @@ if uploaded_file is not None:
         elif option == "🔧 Handle Missing Values":
             st.subheader("🔧 Handle Missing Values")
             missing_cols = af.get_missing_columns(df)
-
+            df = st.session_state.get("df", df)
             if not missing_cols:
                 st.info("✅ No missing values found in the dataset.")
             else:
@@ -441,7 +460,7 @@ if uploaded_file is not None:
 
         elif option == "💡 Encode Features":
             st.subheader("💡 Encode Features")
-
+            df = st.session_state.get("df", df)
             cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
 
             if st.checkbox("Select all categorical columns"):
@@ -456,9 +475,9 @@ if uploaded_file is not None:
                 st.session_state.df = df
                 st.dataframe(df)
 
-
-
         elif option == "🗑️ Remove Columns":
+            st.subheader("🗑️ Remove Columns")
+            df = st.session_state.get("df", df)
             cols = st.multiselect("Select columns to remove", df.columns)
             if st.button("Remove Columns"):
                 df = af.remove_columns(df, cols)
@@ -468,7 +487,7 @@ if uploaded_file is not None:
 
         elif option == "✏️ Rename Columns":
             st.subheader("✏️ Rename Columns")
-
+            df = st.session_state.get("df", df)
             # اختيار العمود الذي سيتم تغييره
             col_to_rename = st.selectbox("Choose column to rename:", df.columns)
 
@@ -487,7 +506,7 @@ if uploaded_file is not None:
 
         elif option == "🧠 Handle Outliers":
             st.subheader("🧠 Handle Outliers")
-
+            df = st.session_state.get("df", df)
             # اختيار العمود الذي سيتم تطبيقه عليه
             col_to_check = st.selectbox("Choose column to check for outliers:", df.columns)
 
@@ -506,6 +525,8 @@ if uploaded_file is not None:
                     st.error("⚠️ Please select a column and a method for outlier handling.")
 
         elif option == "🧾 Check Data Integrity":
+            st.subheader("🧾 Check Data Integrity")
+            df = st.session_state.get("df", df)
             result = af.check_data_integrity(df)
             st.subheader("📊 Data Integrity Report")
             for key, value in result.items():
@@ -513,6 +534,7 @@ if uploaded_file is not None:
 
 
         elif option == "📥 Download Cleaned Dataset":
+            df = st.session_state.get("df", df)
             st.subheader("📥 Download Cleaned Dataset")
             format = st.selectbox("Choose format", ['csv', 'excel'])
         
@@ -532,7 +554,7 @@ if uploaded_file is not None:
                 )
         elif option == "🔄 Replace Values":
             st.subheader("🔄 Replace Values in Columns")
-
+            df = st.session_state.get("df", df)
             # 1. Let user pick one or more columns
             cols = st.multiselect("Select column(s) to modify:", df.columns.tolist())
 
@@ -577,6 +599,7 @@ if uploaded_file is not None:
             "Missing Barplot", "Word Cloud"
         ])
         # Function to show appropriate columns for each plot
+        df = st.session_state.get("df", df)
         def get_column_options(plot_type, df):
             if plot_type in ["Scatter Plot", "Line Plot (Time Series)"]:
                 return df.columns
@@ -699,12 +722,14 @@ if uploaded_file is not None:
     import xgboost as xgb
     from xgboost import XGBClassifier, XGBRegressor
 
-    # ========= Model Selection & Training =========
+    
+# ========= Model Selection & Training =========
     with tabs[2]:
         st.header("🤖 Model Selection & Training")
 
         if not all(k in st.session_state for k in ['X_train', 'X_test', 'y_train', 'y_test', 'target_col']):
             st.warning("⚠️ Please complete preprocessing steps first: Set target variable and split dataset.")
+        
         else:
             # ========== Load Models ==========
             st.subheader("📂 Load Pre-trained Models")
@@ -727,13 +752,10 @@ if uploaded_file is not None:
 
                         st.subheader("📊 Evaluation Metrics")
                         if isinstance(loaded_model, (LogisticRegression, RandomForestClassifier, KNeighborsClassifier, SVC, DecisionTreeClassifier, GradientBoostingClassifier, XGBClassifier)):
-                            if isinstance(st.session_state.y_test.iloc[0], (int, str)):
-                                st.write("**Accuracy:**", accuracy_score(st.session_state.y_test, y_pred))
-                                st.write("**F1 Score:**", f1_score(st.session_state.y_test, y_pred, average='weighted'))
-                                st.write("**Precision:**", precision_score(st.session_state.y_test, y_pred, average='weighted'))
-                                st.write("**Recall:**", recall_score(st.session_state.y_test, y_pred, average='weighted'))
-                            else:
-                                st.error("❌ Error: Target variable is not categorical. Please ensure you're using a classification model with categorical targets.")
+                            st.write("**Accuracy:**", accuracy_score(st.session_state.y_test, y_pred))
+                            st.write("**F1 Score:**", f1_score(st.session_state.y_test, y_pred, average='weighted'))
+                            st.write("**Precision:**", precision_score(st.session_state.y_test, y_pred, average='weighted'))
+                            st.write("**Recall:**", recall_score(st.session_state.y_test, y_pred, average='weighted'))
                         
                         elif isinstance(loaded_model, (LinearRegression, RandomForestRegressor, KNeighborsRegressor, SVR, GradientBoostingRegressor, XGBRegressor)):
                             st.write("**R² Score:**", r2_score(st.session_state.y_test, y_pred))
@@ -743,9 +765,8 @@ if uploaded_file is not None:
                 except Exception as e:
                     st.error(f"❌ Error loading model: {e}")
 
-            # ========== Train New Model ========== 
+            # ========== Train New Model ==========
             st.subheader("🔄 Train New Model")
-
             task_type = st.radio("Select ML Task Type:", ["Classification", "Regression"])
 
             if task_type == "Classification":
@@ -796,14 +817,12 @@ if uploaded_file is not None:
                 st.session_state.y_pred = y_pred
                 st.success(f"✅ {model_name} trained successfully!")
 
-                # ========== عرض القيم الحقيقية والمتوقعة ==========
                 st.write("### 🔍 True vs Predicted Values")
                 st.write(pd.DataFrame({
                     "True Values": st.session_state.y_test,
                     "Predicted Values": y_pred
                 }))
 
-                # ========== Evaluation ==========
                 st.subheader("📊 Evaluation Metrics")
                 if task_type == "Classification":
                     st.write("**Accuracy:**", accuracy_score(st.session_state.y_test, y_pred))
@@ -814,14 +833,13 @@ if uploaded_file is not None:
                     st.write("**R² Score:**", r2_score(st.session_state.y_test, y_pred))
                     st.write("**MAE:**", mean_absolute_error(st.session_state.y_test, y_pred))
 
-                # ========== Save and Download ==========
                 model_filename = f"{model_name}.pkl"
                 model_path = os.path.join("models", model_filename)
                 os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
                 with open(model_path, 'wb') as f:
                     pickle.dump(model, f)
-                
+
                 buffer = io.BytesIO()
                 pickle.dump(model, buffer)
                 buffer.seek(0)
@@ -832,7 +850,29 @@ if uploaded_file is not None:
                     mime="application/octet-stream"
                 )
 
-# ==============================
+            # ========== Manual Input Prediction ==========
+            if "trained_model" in st.session_state:
+                st.subheader("🧪 Predict on Custom Input")
+                feature_names = st.session_state.X_train.columns
+
+                user_input = {}
+                for feature in feature_names:
+                    dtype = st.session_state.X_train[feature].dtype
+                    if dtype == 'object' or dtype.name == 'category':
+                        unique_vals = st.session_state.X_train[feature].unique()
+                        user_input[feature] = st.selectbox(f"{feature} (categorical)", unique_vals)
+                    else:
+                        user_input[feature] = st.number_input(f"{feature} (numeric)", value=0.0)
+
+                if st.button("🔍 Predict on Input"):
+                    input_df = pd.DataFrame([user_input])
+                    try:
+                        prediction = st.session_state.trained_model.predict(input_df)
+                        st.success(f"✅ Predicted Value: {prediction[0]}")
+                    except Exception as e:
+                        st.error(f"❌ Prediction failed: {e}")
+
+ # ==============================
 # 3. تبويب chatbot
 # ==============================
 
@@ -840,12 +880,11 @@ if uploaded_file is not None:
         st.header("🦾 YourAnalyst Assistant")
         st.subheader("🔍 Analyze Dataset and Suggest Steps")
 
-        HARDCODED_OPENROUTER_API_KEY = "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"
+        HARDCODED_OPENROUTER_API_KEY = "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"
         HARDCODED_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
         HARDCODED_OPENROUTER_MODEL_NAME = "meta-llama/llama-3.1-8b-instruct:free"
 
-        df = st.session_state.df  # Data already loaded and stored
-
+        df = st.session_state.get("df", df)
         def analyze_dataset(df):
             suggestions = {
                 "Missing Values": [],
