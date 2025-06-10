@@ -1,0 +1,15 @@
+pandas
+joblib
+dash
+dash-bootstrap-components
+plotly
+streamlit
+scikit-learn
+numpy
+scipy
+openai
+matplotlib
+seaborn
+wordcloud
+xgboost
+xlsxwriter
