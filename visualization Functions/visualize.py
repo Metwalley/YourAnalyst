@@ -3,6 +3,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from wordcloud import WordCloud
+from sklearn.metrics import confusion_matrix, roc_curve, auc # Added
+import numpy as np # Added
 
 # دالة لتحميل البيانات
 def load_data(file_path):
@@ -102,4 +104,48 @@ def plot_wordcloud(text):
     ax.imshow(wordcloud, interpolation="bilinear")
     ax.axis("off")
     ax.set_title("Word Cloud")
+    return fig
+
+# New function for Confusion Matrix
+def plot_confusion_matrix(y_true, y_pred, class_names):
+    # Ensure class_names are unique and sorted if not from model.classes_ directly
+    # The calling function should handle providing appropriate class_names
+    cm = confusion_matrix(y_true, y_pred, labels=class_names)
+    fig, ax = plt.subplots(figsize=(max(8, len(class_names)*0.75), max(6, len(class_names)*0.6))) # Adjust size
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names, ax=ax)
+    ax.set_xlabel('Predicted labels')
+    ax.set_ylabel('True labels')
+    ax.set_title('Confusion Matrix')
+    plt.tight_layout()
+    return fig
+
+# New function for ROC Curve
+def plot_roc_curve(y_true, y_pred_scores): # y_pred_scores are 1D array: probabilities of positive class or decision scores
+    if y_pred_scores is None:
+        # print("Debug: y_pred_scores is None in plot_roc_curve.") # For worker's debugging
+        return None # Silently return None, calling function handles messages
+    if not isinstance(y_pred_scores, np.ndarray) or y_pred_scores.ndim != 1:
+        # print(f"Debug: y_pred_scores type {type(y_pred_scores)}, ndim {y_pred_scores.ndim if hasattr(y_pred_scores, 'ndim') else 'N/A'}") # For worker's debugging
+        # This case should be handled by the caller, but as a safeguard:
+        return None # Silently return None
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    try:
+        fpr, tpr, _ = roc_curve(y_true, y_pred_scores)
+        roc_auc = auc(fpr, tpr)
+
+        ax.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+        ax.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+        ax.set_xlabel('False Positive Rate')
+        ax.set_ylabel('True Positive Rate')
+        ax.set_title('Receiver Operating Characteristic (ROC) Curve')
+        ax.legend(loc="lower right")
+        plt.tight_layout()
+    except Exception as e:
+        # print(f"Error in plot_roc_curve: {e}") # For worker's debugging
+        # Optionally, could draw error on fig, but returning None is cleaner for caller
+        plt.close(fig) # Close the figure if an error occurred during plotting
+        return None
     return fig
